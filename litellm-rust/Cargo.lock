@@ -3474,12 +3474,14 @@ name = "litellm-cache"
 version = "0.1.0"
 dependencies = [
  "litellm-error",
+ "litellm-redis-client",
  "rstest",
  "serde",
  "serde_json",
  "strum",
  "thiserror 2.0.19",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -4358,6 +4360,8 @@ dependencies = [
  "litellm-cache-redis",
  "litellm-cache-response",
  "litellm-callbacks-legacy-python",
+ "litellm-circuit-breaker",
+ "litellm-config",
  "litellm-core-utils",
  "litellm-error",
  "litellm-host",
@@ -4372,6 +4376,9 @@ dependencies = [
  "litellm-llms",
  "litellm-llms-types",
  "litellm-model-catalog",
+ "litellm-redis-client",
+ "litellm-redis-connect",
+ "litellm-redis-store",
  "litellm-router-types",
  "litellm-secret-value",
  "litellm-secrets",
@@ -4433,6 +4440,7 @@ dependencies = [
  "socket2 0.6.5",
  "thiserror 2.0.19",
  "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -4463,6 +4471,25 @@ dependencies = [
  "tracing",
  "url",
  "veil",
+]
+
+[[package]]
+name = "litellm-redis-store"
+version = "0.1.0"
+dependencies = [
+ "futures-util",
+ "litellm-cache",
+ "litellm-cache-memory",
+ "litellm-circuit-breaker",
+ "litellm-python-compat",
+ "litellm-redis-client",
+ "litellm-redis-testing",
+ "litellm-secret-value",
+ "rstest",
+ "serde_json",
+ "thiserror 2.0.19",
+ "tokio",
+ "tracing",
 ]
 
 [[package]]
