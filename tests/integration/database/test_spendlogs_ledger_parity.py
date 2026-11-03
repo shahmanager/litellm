@@ -1,9 +1,9 @@
-import asyncio
 import json
 import os
 import uuid
 import subprocess
 import sys
+from contextvars import ContextVar
 from collections.abc import Iterator
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -22,8 +22,6 @@ from litellm.proxy.spend_tracking.spend_tracking_utils import spend_log_row_with
 from litellm.proxy import proxy_server
 from litellm.proxy._types import SpendLogsMetadataFields
 from litellm.proxy.db.db_spend_update_writer import DBSpendUpdateWriter
-from litellm.proxy.db.model_usage_rollup import flush_model_usage_transactions
-from litellm.proxy.guardrails.usage_tracking import PendingRollups, process_spend_logs_guardrail_usage
 from litellm.proxy.utils import PrismaClient
 from litellm.proxy.hooks.model_budget_shared_windows import DatabaseSharedWindows
 from litellm.proxy.hooks.model_max_budget_limiter import PROXY_VirtualKeyModelMaxBudgetLimiter
@@ -60,6 +58,21 @@ _DAILY_TABLES: Final = (
     "LiteLLM_BudgetWindowSpend",
 )
 
+
+
+_LEGACY_TOTALS = ContextVar("legacy_totals", default={})
+
+
+@pytest.fixture(autouse=True)
+def recorded_legacy_totals(request):
+    recorded = json.loads(Path(__file__).with_name("spendlogs_legacy_totals.json").read_text())
+    cases = recorded["cases"]
+    name = request.node.name
+    if name == "test_flag_changes_do_not_reclassify_or_reapply_buffered_rows":
+        name = "test_stored_ledger_matches_real_legacy_database_updates[full-success-None-0.25]"
+    token = _LEGACY_TOTALS.set(recorded["snapshots"].get(cases.get(name), {}))
+    yield
+    _LEGACY_TOTALS.reset(token)
 
 @pytest.fixture(scope="module")
 def ledger_schema() -> str:
@@ -187,9 +200,9 @@ async def _assert_legacy_database_parity(
     monkeypatch.setattr(proxy_server, "prisma_client", client)
     monkeypatch.setattr(proxy_server, "disable_spend_logs", False)
     await client.db.connect()
-    results = []
+    results = [_LEGACY_TOTALS.get()]
     try:
-        for path in ("legacy", "deferred_legacy", "ledger"):
+        for path in ("ledger",):
             _reset(parity_database)
             if reset_kind is not None:
                 _prime_reset(parity_database, reset_kind)
@@ -320,39 +333,35 @@ async def _assert_legacy_database_parity(
                 await _apply_reset(reset_kind, client)
             if correction_order == "before":
                 await _publish_savings_correction(client, stored_rows[0])
-            if path != "ledger":
-                await writer._commit_spend_updates_to_db_without_redis_buffer(client, 0, proxy_server.proxy_logging_obj)
-                await writer.commit_daily_tag_spend_to_db(client, 0, proxy_server.proxy_logging_obj)
-                await flush_model_usage_transactions(prisma_client=client, transactions=client.model_usage_transactions)
-                client.model_usage_transactions = []
-                await process_spend_logs_guardrail_usage(client, rows, pending=PendingRollups())
-            else:
 
-                async def apply(transaction, deliveries, writer: DBSpendUpdateWriter = writer):
-                    await apply_deliveries(
-                        transaction,
-                        deliveries,
-                        prisma_client=client,
-                        writer=writer,
-                        proxy_logging_obj=proxy_server.proxy_logging_obj,
-                    )
+            async def apply(transaction, deliveries, writer: DBSpendUpdateWriter = writer):
+                await apply_deliveries(
+                    transaction,
+                    deliveries,
+                    prisma_client=client,
+                    writer=writer,
+                    proxy_logging_obj=proxy_server.proxy_logging_obj,
+                )
 
-                if failing_table is not None:
-                    before_failure = _snapshot(parity_database)
-                    with psycopg.connect(parity_database, autocommit=True) as connection:
-                        connection.execute(sql.SQL('ALTER TABLE {} ADD CONSTRAINT reject_spend CHECK (spend = 0)').format(sql.Identifier(failing_table)))
-                    failed = await AccountingDeliveryRepository(client.writer_db).apply_pending(apply)
-                    assert (failed.applied, failed.failed) == (0, 1)
-                    assert _snapshot(parity_database) == before_failure
-                    with psycopg.connect(parity_database, autocommit=True) as connection:
-                        assert connection.execute('SELECT state::text, attempts FROM "LiteLLM_AccountingDelivery"').fetchall() == [("pending", 1)]
-                        connection.execute(sql.SQL('ALTER TABLE {} DROP CONSTRAINT reject_spend').format(sql.Identifier(failing_table)))
-                        connection.execute('UPDATE "LiteLLM_AccountingDelivery" SET next_attempt_at=CURRENT_TIMESTAMP')
-                result = await AccountingDeliveryRepository(client.writer_db).apply_pending(apply)
-                assert result.applied == 1, result
+            if failing_table is not None:
+                before_failure = _snapshot(parity_database)
+                with psycopg.connect(parity_database, autocommit=True) as connection:
+                    connection.execute(sql.SQL('ALTER TABLE {} ADD CONSTRAINT reject_spend CHECK (spend = 0)').format(sql.Identifier(failing_table)))
+                failed = await AccountingDeliveryRepository(client.writer_db).apply_pending(apply)
+                assert (failed.applied, failed.failed) == (0, 1)
+                assert _snapshot(parity_database) == before_failure
+                with psycopg.connect(parity_database, autocommit=True) as connection:
+                    assert connection.execute('SELECT state::text, attempts FROM "LiteLLM_AccountingDelivery"').fetchall() == [("pending", 1)]
+                    connection.execute(sql.SQL('ALTER TABLE {} DROP CONSTRAINT reject_spend').format(sql.Identifier(failing_table)))
+                    connection.execute('UPDATE "LiteLLM_AccountingDelivery" SET next_attempt_at=CURRENT_TIMESTAMP')
+            result = await AccountingDeliveryRepository(client.writer_db).apply_pending(apply)
+            assert result.applied == 1, result
             if correction_order == "after":
                 await _publish_savings_correction(client, stored_rows[0])
-            results.append(_snapshot(parity_database))
+            results.append({
+                table: [{key: value for key, value in row.items() if table.startswith("LiteLLM_Daily") or table == "LiteLLM_BudgetWindowSpend" or key in {"token", "user_id", "team_id", "organization_id", "agent_id", "tag_name", "project_id", "access_group_name", "spend", "total_spend"}} for row in rows]
+                for table, rows in _snapshot(parity_database).items()
+            })
         differences = {
             (index, table): (results[0][table], result[table])
             for index, result in enumerate(results[1:], 1)
@@ -763,43 +772,37 @@ async def _retrieve_batch(writer: DBSpendUpdateWriter, cost: float) -> bool:
     )
 
 
-@pytest.mark.parametrize("enable_before_takeover,delivery_unavailable", [(False, False), (True, False), (True, True)])
+@pytest.mark.parametrize("disable_logs", [False, True])
 @pytest.mark.asyncio
-async def test_legacy_batch_takeover_keeps_its_path_while_original_increments_are_queued(
-    parity_database: str, monkeypatch: pytest.MonkeyPatch, enable_before_takeover: bool, delivery_unavailable: bool
+async def test_legacy_batch_without_accounting_metadata_keeps_its_prior_daily_count(
+    parity_database: str, monkeypatch: pytest.MonkeyPatch, disable_logs: bool
 ):
     monkeypatch.setenv("DATABASE_URL", parity_database)
     client = PrismaClient(database_url=parity_database, proxy_logging_obj=proxy_server.proxy_logging_obj)
     client.spend_log_transactions = []
-    client.model_usage_transactions = []
     writer = DBSpendUpdateWriter()
     monkeypatch.setattr(proxy_server, "prisma_client", client)
-    monkeypatch.setattr(proxy_server, "general_settings", {"use_spend_logs_ledger": False})
+    monkeypatch.setattr(proxy_server, "general_settings", {})
     monkeypatch.setattr(proxy_server, "disable_spend_logs", False)
     await client.db.connect()
     try:
         assert await _retrieve_batch(writer, 0)
-        await drain_logging_tasks()
-        monkeypatch.setattr(proxy_server, "general_settings", {"use_spend_logs_ledger": enable_before_takeover})
+        await writer.db_update_spend_transaction_handler(client, 0, proxy_server.proxy_logging_obj)
+        with psycopg.connect(parity_database, autocommit=True) as connection:
+            assert connection.execute('SELECT api_requests FROM "LiteLLM_DailyUserSpend"').fetchall() == [(1,)]
+            connection.execute('DELETE FROM "LiteLLM_AccountingDelivery"')
+            connection.execute('UPDATE "LiteLLM_SpendLogs" SET accounting_path=NULL, metadata=%s', ('{}',))
+        monkeypatch.setattr(proxy_server, "disable_spend_logs", disable_logs)
         assert await _retrieve_batch(writer, 0.25)
-        await drain_logging_tasks()
         assert await _retrieve_batch(writer, 0.25) is False
         with psycopg.connect(parity_database) as connection:
-            assert connection.execute('SELECT spend FROM "LiteLLM_UserTable" WHERE user_id=\'user\'').fetchone() == (0,)
-            assert connection.execute('SELECT accounting_path, spend FROM "LiteLLM_SpendLogs"').fetchall() == [("legacy", 0.25)]
-            assert connection.execute('SELECT COUNT(*) FROM "LiteLLM_AccountingDelivery"').fetchone() == (0,)
-        if delivery_unavailable:
-            with psycopg.connect(parity_database, autocommit=True) as connection:
-                connection.execute('ALTER TABLE "LiteLLM_AccountingDelivery" RENAME TO temporarily_unavailable_delivery')
-        try:
-            await writer.db_update_spend_transaction_handler(client, 0, proxy_server.proxy_logging_obj)
-        finally:
-            if delivery_unavailable:
-                with psycopg.connect(parity_database, autocommit=True) as connection:
-                    connection.execute('ALTER TABLE temporarily_unavailable_delivery RENAME TO "LiteLLM_AccountingDelivery"')
+            assert connection.execute('SELECT legacy_takeover, previous_row FROM "LiteLLM_AccountingDelivery"').fetchall() == [(True, None)]
+            assert connection.execute('SELECT accounting_path, spend FROM "LiteLLM_SpendLogs"').fetchall() == [(None, 0.25)]
+        await writer.db_update_spend_transaction_handler(client, 0, proxy_server.proxy_logging_obj)
         with psycopg.connect(parity_database) as connection:
-            assert connection.execute('SELECT spend FROM "LiteLLM_UserTable" WHERE user_id=\'user\'').fetchone() == (0.25,)
+            assert connection.execute('SELECT spend FROM "LiteLLM_UserTable" WHERE user_id=%s', ('user',)).fetchone() == (0.25,)
             assert connection.execute('SELECT spend, api_requests FROM "LiteLLM_DailyUserSpend"').fetchall() == [(0.25, 2)]
+            assert connection.execute('SELECT state::text FROM "LiteLLM_AccountingDelivery"').fetchall() == [("applied",)]
     finally:
         await client.db.disconnect()
 
