@@ -135,6 +135,10 @@ impl<T> Declared<T> {
             Err(TryRecvError::Empty) => {}
         }
         self.batch.flush().await;
+        self.settled().await
+    }
+
+    pub async fn settled(self) -> Result<T, Error> {
         let reply = self.reply.await.unwrap_or_else(|_| Err(abandoned()));
         reply.and_then(self.decode)
     }

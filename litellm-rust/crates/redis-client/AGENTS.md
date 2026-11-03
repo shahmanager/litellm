@@ -42,6 +42,7 @@
 - `RedisBatch` declares ops now and sends them later as one `Pipeline`, so it inherits every pipeline rule above. It knows nothing about requests. The host that owns a request (Axum handler, pyo3 adapter) builds one and passes it down as a value, never through a task-local
 - Each op returns a `Declared<T>` backed by a oneshot. `flush` sends everything declared so far, one flush at a time, and an empty flush makes no round trip. `resolve` flushes only when its op has not gone out yet, so an op declared after another caller resolved costs a second round trip. Stages that know their reads up front declare all of them and call `flush` once
 - An op whose flush was cancelled resolves as `Transport`, because it may already have reached Redis
+- `settled` waits for whichever flush carries the op and never sends one itself, for follow-ups that must not force a flush. `RedisClient::same_client` tells clones of one client apart from a second connection, so a host can keep one batch per client
 - Against real Redis from `litellm-redis-testing`, never a mocked wire or asserted command bytes
 - Tests that only need the public API live in `tests/<module>.rs`, with client builders in `tests/support`. Inline `#[cfg(test)]` modules are only for private items (`error.rs`, `namespace.rs`)
 - Observe connections from the server side (`RedisDeployment::clients`, `cli_on_every_node`), never by reaching into `RedisClient`'s connection

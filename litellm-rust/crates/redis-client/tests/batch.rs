@@ -40,6 +40,7 @@ fn observed(server: &RedisDeployment) -> (RedisClient, Arc<RoundTrips>) {
         timeouts: Timeouts::default(),
         breaker: None,
         events: Some(trips.clone()),
+        health_check: None,
     })
     .unwrap();
     (client, trips)
@@ -144,4 +145,51 @@ async fn an_op_whose_flush_was_cancelled_resolves_as_transport(
 
     assert!(cancelled.is_err());
     assert!(matches!(counter.resolve().await, Err(Error::Transport(_))));
+}
+
+#[rstest]
+#[tokio::test]
+async fn a_settled_op_waits_for_someone_else_to_flush_and_sends_nothing_itself(
+    #[values(Topology::Standalone, Topology::Cluster)] topology: Topology,
+) {
+    let server = RedisDeployment::start(topology).await.unwrap();
+    let (client, trips) = observed(&server);
+    let batch = client.batch();
+    let counter = tokio::spawn(batch.incr_by("counter", 4, KEEP).settled());
+
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    assert!(!counter.is_finished());
+    assert!(trips.seen().is_empty());
+
+    batch.flush().await;
+
+    assert_eq!(counter.await.unwrap().unwrap(), 4);
+    assert_eq!(trips.seen(), [Operation::Pipeline { ops: 1 }]);
+}
+
+#[rstest]
+#[tokio::test]
+async fn a_settled_op_whose_flush_was_cancelled_resolves_as_transport() {
+    let server = RedisDeployment::start(Topology::Standalone).await.unwrap();
+    let client = connect(&server, "", Duration::from_secs(5));
+    let batch = client.batch();
+    let counter = batch.incr_by("counter", 1, KEEP);
+
+    server.freeze().await.unwrap();
+    let cancelled = tokio::time::timeout(Duration::from_millis(200), batch.flush()).await;
+    server.thaw().await.unwrap();
+
+    assert!(cancelled.is_err());
+    assert!(matches!(counter.settled().await, Err(Error::Transport(_))));
+}
+
+#[rstest]
+#[tokio::test]
+async fn clones_are_the_same_client_and_a_second_connection_is_not() {
+    let server = RedisDeployment::start(Topology::Standalone).await.unwrap();
+    let client = connect(&server, "", DEFAULT_TIMEOUT);
+    let twin = connect(&server, "", DEFAULT_TIMEOUT);
+
+    assert!(client.same_client(&client.clone()));
+    assert!(!client.same_client(&twin));
 }
