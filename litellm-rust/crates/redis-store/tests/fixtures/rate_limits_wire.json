@@ -1,0 +1,52 @@
+{
+  "scripts": {
+    "batch_rate_limiter": "1e1d6e80e9488215da3f8d4aefae5ee3fbe71663",
+    "batch_counter_read": "b272298fae5e83182e7719c6be8d1ef76a62465f",
+    "check_and_increment_by_n": "cbf6fb1b9184f1834b44b05bdeda3806fbc2da41",
+    "window_guarded_token_increment": "fec058661fefb81df4e5da0cc045df5f4a3f0a00",
+    "parallel_acquire": "86c5a792cfc23df2842c413908b3eb3f2b811ac3",
+    "parallel_release": "cb232fec078c0b66691670a16b84079139035b4e",
+    "parallel_count": "9ae6ae0ca54e4c1930356965275e1d442b2f25ba",
+    "token_increment": "bacdccafbf0cb85105a45154294f340c6275fe3f"
+  },
+  "scopes": [
+    {
+      "descriptor_key": "api_key",
+      "descriptor_value": "88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b",
+      "window": "{api_key:88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b}:window",
+      "requests": "{api_key:88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b}:requests",
+      "tokens": "{api_key:88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b}:tokens",
+      "max_parallel_requests": "{api_key:88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b}:max_parallel_requests"
+    },
+    {
+      "descriptor_key": "team_member",
+      "descriptor_value": "team-1:user@example.com",
+      "window": "{team_member:team-1:user@example.com}:window",
+      "requests": "{team_member:team-1:user@example.com}:requests",
+      "tokens": "{team_member:team-1:user@example.com}:tokens",
+      "max_parallel_requests": "{team_member:team-1:user@example.com}:max_parallel_requests"
+    },
+    {
+      "descriptor_key": "model_per_key",
+      "descriptor_value": "sk-hash:anthropic/claude-sonnet-5-5",
+      "window": "{model_per_key:sk-hash:anthropic/claude-sonnet-5-5}:window",
+      "requests": "{model_per_key:sk-hash:anthropic/claude-sonnet-5-5}:requests",
+      "tokens": "{model_per_key:sk-hash:anthropic/claude-sonnet-5-5}:tokens",
+      "max_parallel_requests": "{model_per_key:sk-hash:anthropic/claude-sonnet-5-5}:max_parallel_requests"
+    },
+    {
+      "descriptor_key": "tag",
+      "descriptor_value": "tier}é",
+      "window": "{tag:tier}é}:window",
+      "requests": "{tag:tier}é}:requests",
+      "tokens": "{tag:tier}é}:tokens",
+      "max_parallel_requests": "{tag:tier}é}:max_parallel_requests"
+    }
+  ],
+  "values": [
+    {"raw": "1730000000", "decoded": 1730000000},
+    {"raw": "7", "decoded": 7},
+    {"raw": "7.5", "decoded": 7.5},
+    {"raw": "-3", "decoded": -3}
+  ]
+}

@@ -4,6 +4,7 @@ mod credentials;
 mod events;
 pub(crate) use client::native_redis_breaker_states;
 mod policy;
+pub(crate) mod rate_limits;
 pub(crate) mod request;
 pub(crate) mod router_cooldowns;
 pub(crate) mod router_usage;

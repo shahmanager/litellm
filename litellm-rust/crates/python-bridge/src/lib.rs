@@ -43,6 +43,8 @@ mod _native {
     #[pymodule_export]
     use crate::redis::native_redis_breaker_states;
     #[pymodule_export]
+    use crate::redis::rate_limits::{NativeRateLimitPending, NativeRateLimits};
+    #[pymodule_export]
     use crate::redis::request::NativeRequestRedis;
     #[pymodule_export]
     use crate::redis::router_cooldowns::{NativeDeclaredCooldowns, NativeRouterCooldowns};
@@ -135,6 +137,8 @@ mod tests {
                 "NativeAuthCacheError",
                 "NativeDeclaredAuthReads",
                 "NativeDeclaredAuthWrite",
+                "NativeRateLimits",
+                "NativeRateLimitPending",
                 "NativeDeclaredCooldowns",
                 "NativeRouterCooldowns",
                 "NativeRouterUsage",
