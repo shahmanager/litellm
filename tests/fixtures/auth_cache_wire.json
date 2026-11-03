@@ -1,0 +1,147 @@
+{
+  "keys": [
+    {
+      "key": "88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b",
+      "key_object": true
+    },
+    {
+      "key": "88DC28D0F030C55ED4AB77ED8FAF098196CB1C05DF778539800C9F1243FE6B4B",
+      "key_object": false
+    },
+    {
+      "key": "88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4",
+      "key_object": false
+    },
+    {
+      "key": "team_id:88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b",
+      "key_object": false
+    },
+    {
+      "key": "team_membership:user-1:team-1",
+      "key_object": false
+    },
+    {
+      "key": "end_user_restricted_registry",
+      "key_object": false
+    }
+  ],
+  "values": [
+    {
+      "value": {
+        "team_id": "team-é",
+        "models": [
+          "gpt-5",
+          "claude-opus-5"
+        ],
+        "max_budget": null,
+        "spend": 0.30000000000000004,
+        "blocked": false,
+        "tpm_limit": 10000000000,
+        "metadata": {
+          "tags": [],
+          "quoted": "it's \"x\""
+        }
+      },
+      "json": "{\"team_id\": \"team-\\u00e9\", \"models\": [\"gpt-5\", \"claude-opus-5\"], \"max_budget\": null, \"spend\": 0.30000000000000004, \"blocked\": false, \"tpm_limit\": 10000000000, \"metadata\": {\"tags\": [], \"quoted\": \"it's \\\"x\\\"\"}}",
+      "str": "{'team_id': 'team-é', 'models': ['gpt-5', 'claude-opus-5'], 'max_budget': None, 'spend': 0.30000000000000004, 'blocked': False, 'tpm_limit': 10000000000, 'metadata': {'tags': [], 'quoted': 'it\\'s \"x\"'}}"
+    },
+    {
+      "value": {
+        "token": "88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b",
+        "spend": 1e-05,
+        "rpm_limit": 5,
+        "expires": "2026-11-03T00:00:00Z"
+      },
+      "json": "{\"token\": \"88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b\", \"spend\": 1e-05, \"rpm_limit\": 5, \"expires\": \"2026-11-03T00:00:00Z\"}",
+      "str": "{'token': '88dc28d0f030c55ed4ab77ed8faf098196cb1c05df778539800c9f1243fe6b4b', 'spend': 1e-05, 'rpm_limit': 5, 'expires': '2026-11-03T00:00:00Z'}"
+    },
+    {
+      "value": "__no_team_membership__",
+      "json": "\"__no_team_membership__\"",
+      "str": "__no_team_membership__"
+    },
+    {
+      "value": [
+        "mcp-a",
+        "mcp-b"
+      ],
+      "json": "[\"mcp-a\", \"mcp-b\"]",
+      "str": "['mcp-a', 'mcp-b']"
+    },
+    {
+      "value": 12.5,
+      "json": "12.5",
+      "str": "12.5"
+    },
+    {
+      "value": 7,
+      "json": "7",
+      "str": "7"
+    },
+    {
+      "value": true,
+      "json": "true",
+      "str": "True"
+    }
+  ],
+  "reads": [
+    {
+      "bytes": "{\"team_id\": \"team-\\u00e9\", \"models\": [\"gpt-5\", \"claude-opus-5\"], \"max_budget\": null, \"spend\": 0.30000000000000004, \"blocked\": false, \"tpm_limit\": 10000000000, \"metadata\": {\"tags\": [], \"quoted\": \"it's \\\"x\\\"\"}}",
+      "value": {
+        "team_id": "team-é",
+        "models": [
+          "gpt-5",
+          "claude-opus-5"
+        ],
+        "max_budget": null,
+        "spend": 0.30000000000000004,
+        "blocked": false,
+        "tpm_limit": 10000000000,
+        "metadata": {
+          "tags": [],
+          "quoted": "it's \"x\""
+        }
+      }
+    },
+    {
+      "bytes": "{'team_id': 'team-é', 'models': ['gpt-5', 'claude-opus-5'], 'max_budget': None, 'spend': 0.30000000000000004, 'blocked': False, 'tpm_limit': 10000000000, 'metadata': {'tags': [], 'quoted': 'it\\'s \"x\"'}}",
+      "value": {
+        "team_id": "team-é",
+        "models": [
+          "gpt-5",
+          "claude-opus-5"
+        ],
+        "max_budget": null,
+        "spend": 0.30000000000000004,
+        "blocked": false,
+        "tpm_limit": 10000000000,
+        "metadata": {
+          "tags": [],
+          "quoted": "it's \"x\""
+        }
+      }
+    },
+    {
+      "bytes": "['mcp-a', 'mcp-b']",
+      "value": [
+        "mcp-a",
+        "mcp-b"
+      ]
+    },
+    {
+      "bytes": "{'user_id': 'u1', 'teams': ['t1'], 'active': True, 'budget': None}",
+      "value": {
+        "user_id": "u1",
+        "teams": [
+          "t1"
+        ],
+        "active": true,
+        "budget": null
+      }
+    },
+    {
+      "bytes": "\"__NO_MAPPING__\"",
+      "value": "__NO_MAPPING__"
+    }
+  ]
+}
